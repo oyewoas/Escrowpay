@@ -19,8 +19,7 @@ import {
   Users,
   AlertTriangle,
 } from "lucide-react";
-import { useAccount } from "wagmi";
-import { useEffect, useState } from "react";
+import React from "react";
 
 // Mock data
 const stats = [
@@ -85,23 +84,12 @@ const recentJobs = [
 ];
 
 export default function Dashboard() {
-  const { isConnected, address } = useAccount();
-
-  const [localIsConnected, setLocalIsConnected] = useState(isConnected);
-
-  useEffect(() => {
-    setLocalIsConnected(isConnected);
-  }, [isConnected]);
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
 
       <div className="flex-1 md:ml-64">
-        <Header
-          isConnected={isConnected}
-          address={address}
-          setIsConnected={setLocalIsConnected}
-        />
+        <Header />
 
         <main className="p-6">
           <div className="mb-8">

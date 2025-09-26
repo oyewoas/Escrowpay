@@ -1,36 +1,113 @@
-"use client"
+"use client";
 
-import { Sidebar } from "@/components/sidebar"
-import { Header } from "@/components/header"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Plus, X, ArrowLeft } from "lucide-react"
-import { format } from "date-fns"
-import { useState } from "react"
-import Link from "next/link"
+import { Sidebar } from "@/components/sidebar";
+import { Header } from "@/components/header";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { CalendarIcon, Plus, X, ArrowLeft, Shield } from "lucide-react";
+import { format } from "date-fns";
+import { useState } from "react";
+import Link from "next/link";
+import { useEscrow } from "@/context/escrow-context";
+import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 
 export default function CreateJobPage() {
-  const [selectedDate, setSelectedDate] = useState<Date>()
-  const [skills, setSkills] = useState<string[]>(["React", "Node.js"])
-  const [newSkill, setNewSkill] = useState("")
+  const { createJob, isLoading } = useEscrow();
+  const { toast } = useToast();
+  const router = useRouter();
+
+  const [selectedDate, setSelectedDate] = useState<Date>();
+  const [skills, setSkills] = useState<string[]>(["React", "Node.js"]);
+  const [newSkill, setNewSkill] = useState("");
+
+  // Job form data
+  const [jobData, setJobData] = useState({
+    title: "",
+    description: "",
+    freelancerAddress: "",
+    budget: "",
+    category: "",
+    experienceLevel: "",
+    duration: "7", // days
+    escrowTerms: "",
+  });
 
   const addSkill = () => {
     if (newSkill.trim() && !skills.includes(newSkill.trim())) {
-      setSkills([...skills, newSkill.trim()])
-      setNewSkill("")
+      setSkills([...skills, newSkill.trim()]);
+      setNewSkill("");
     }
-  }
+  };
+
+  const handleCreateJob = async () => {
+    console.log("Creating job with data:", jobData);
+    // Validation
+    if (
+      !jobData.title ||
+      !jobData.description ||
+      !jobData.budget ||
+      !jobData.freelancerAddress
+    ) {
+      toast({
+        title: "Missing Information",
+        description:
+          "Please fill in all required fields including freelancer address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const durationInSeconds = parseInt(jobData.duration) * 24 * 60 * 60; // Convert days to seconds
+      const result = await createJob(
+        jobData.freelancerAddress,
+        durationInSeconds,
+        jobData.budget
+      );
+
+      toast({
+        title: "Job Created Successfully",
+        description: `Job ID: ${result.jobId}`,
+      });
+
+      // Redirect to the job details or jobs list
+      router.push("/jobs");
+    } catch (error: any) {
+      toast({
+        title: "Error Creating Job",
+        description: error.message || "Failed to create job",
+        variant: "destructive",
+      });
+    }
+  };
 
   const removeSkill = (skillToRemove: string) => {
-    setSkills(skills.filter((skill) => skill !== skillToRemove))
-  }
+    setSkills(skills.filter((skill) => skill !== skillToRemove));
+  };
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -48,8 +125,12 @@ export default function CreateJobPage() {
                 </Button>
               </Link>
               <div>
-                <h1 className="text-3xl font-bold text-foreground">Create New Job</h1>
-                <p className="text-muted-foreground">Post a new project and find the perfect freelancer</p>
+                <h1 className="text-3xl font-bold text-foreground">
+                  Create New Job
+                </h1>
+                <p className="text-muted-foreground">
+                  Post a new project and find the perfect freelancer
+                </p>
               </div>
             </div>
           </div>
@@ -59,26 +140,52 @@ export default function CreateJobPage() {
               {/* Basic Information */}
               <Card className="bg-card border-border">
                 <CardHeader>
-                  <CardTitle className="text-foreground">Basic Information</CardTitle>
-                  <CardDescription>Provide the essential details about your project</CardDescription>
+                  <CardTitle className="text-foreground">
+                    Basic Information
+                  </CardTitle>
+                  <CardDescription>
+                    Provide the essential details about your project
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-2">
                     <Label htmlFor="title">Project Title *</Label>
-                    <Input id="title" placeholder="e.g., E-commerce Website Development" className="bg-muted/50" />
+                    <Input
+                      id="title"
+                      placeholder="e.g., E-commerce Website Development"
+                      className="bg-muted/50"
+                      value={jobData.title}
+                      onChange={(e) =>
+                        setJobData((prev) => ({
+                          ...prev,
+                          title: e.target.value,
+                        }))
+                      }
+                    />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="category">Category *</Label>
-                    <Select>
+                    <Select
+                      value={jobData.category}
+                      onValueChange={(value) =>
+                        setJobData((prev) => ({ ...prev, category: value }))
+                      }
+                    >
                       <SelectTrigger className="bg-muted/50">
                         <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="development">Web Development</SelectItem>
-                        <SelectItem value="mobile">Mobile Development</SelectItem>
+                        <SelectItem value="development">
+                          Web Development
+                        </SelectItem>
+                        <SelectItem value="mobile">
+                          Mobile Development
+                        </SelectItem>
                         <SelectItem value="design">Design</SelectItem>
-                        <SelectItem value="writing">Writing & Content</SelectItem>
+                        <SelectItem value="writing">
+                          Writing & Content
+                        </SelectItem>
                         <SelectItem value="marketing">Marketing</SelectItem>
                         <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
@@ -92,6 +199,13 @@ export default function CreateJobPage() {
                       placeholder="Describe your project in detail. Include requirements, expectations, and any specific technologies or tools needed..."
                       rows={6}
                       className="bg-muted/50"
+                      value={jobData.description}
+                      onChange={(e) =>
+                        setJobData((prev) => ({
+                          ...prev,
+                          description: e.target.value,
+                        }))
+                      }
                     />
                   </div>
                 </CardContent>
@@ -100,8 +214,12 @@ export default function CreateJobPage() {
               {/* Budget and Timeline */}
               <Card className="bg-card border-border">
                 <CardHeader>
-                  <CardTitle className="text-foreground">Budget & Timeline</CardTitle>
-                  <CardDescription>Set your budget and project timeline</CardDescription>
+                  <CardTitle className="text-foreground">
+                    Budget & Timeline
+                  </CardTitle>
+                  <CardDescription>
+                    Set your budget and project timeline
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -120,7 +238,20 @@ export default function CreateJobPage() {
 
                     <div className="space-y-2">
                       <Label htmlFor="budget">Budget Amount (ETH) *</Label>
-                      <Input id="budget" type="number" step="0.01" placeholder="0.00" className="bg-muted/50" />
+                      <Input
+                        id="budget"
+                        type="number"
+                        step="0.001"
+                        placeholder="0.00"
+                        className="bg-muted/50"
+                        value={jobData.budget}
+                        onChange={(e) =>
+                          setJobData((prev) => ({
+                            ...prev,
+                            budget: e.target.value,
+                          }))
+                        }
+                      />
                     </div>
                   </div>
 
@@ -129,13 +260,23 @@ export default function CreateJobPage() {
                       <Label>Project Deadline *</Label>
                       <Popover>
                         <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-full justify-start text-left font-normal bg-muted/50">
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal bg-muted/50"
+                          >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
+                            {selectedDate
+                              ? format(selectedDate, "PPP")
+                              : "Pick a date"}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
-                          <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} initialFocus />
+                          <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={setSelectedDate}
+                            initialFocus
+                          />
                         </PopoverContent>
                       </Popover>
                     </div>
@@ -147,12 +288,16 @@ export default function CreateJobPage() {
                           <SelectValue placeholder="Select duration" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="1-week">Less than 1 week</SelectItem>
+                          <SelectItem value="1-week">
+                            Less than 1 week
+                          </SelectItem>
                           <SelectItem value="1-2-weeks">1-2 weeks</SelectItem>
                           <SelectItem value="2-4-weeks">2-4 weeks</SelectItem>
                           <SelectItem value="1-2-months">1-2 months</SelectItem>
                           <SelectItem value="2-6-months">2-6 months</SelectItem>
-                          <SelectItem value="6-months-plus">6+ months</SelectItem>
+                          <SelectItem value="6-months-plus">
+                            6+ months
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -163,15 +308,23 @@ export default function CreateJobPage() {
               {/* Skills and Requirements */}
               <Card className="bg-card border-border">
                 <CardHeader>
-                  <CardTitle className="text-foreground">Skills & Requirements</CardTitle>
-                  <CardDescription>Specify the skills and experience needed for this project</CardDescription>
+                  <CardTitle className="text-foreground">
+                    Skills & Requirements
+                  </CardTitle>
+                  <CardDescription>
+                    Specify the skills and experience needed for this project
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-2">
                     <Label>Required Skills *</Label>
                     <div className="flex flex-wrap gap-2 mb-3">
                       {skills.map((skill) => (
-                        <Badge key={skill} variant="secondary" className="flex items-center gap-1">
+                        <Badge
+                          key={skill}
+                          variant="secondary"
+                          className="flex items-center gap-1"
+                        >
                           {skill}
                           <button
                             type="button"
@@ -189,9 +342,16 @@ export default function CreateJobPage() {
                         onChange={(e) => setNewSkill(e.target.value)}
                         placeholder="Add a skill..."
                         className="bg-muted/50"
-                        onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addSkill())}
+                        onKeyPress={(e) =>
+                          e.key === "Enter" && (e.preventDefault(), addSkill())
+                        }
                       />
-                      <Button type="button" onClick={addSkill} size="icon" variant="outline">
+                      <Button
+                        type="button"
+                        onClick={addSkill}
+                        size="icon"
+                        variant="outline"
+                      >
                         <Plus className="w-4 h-4" />
                       </Button>
                     </div>
@@ -205,14 +365,41 @@ export default function CreateJobPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="entry">Entry Level</SelectItem>
-                        <SelectItem value="intermediate">Intermediate</SelectItem>
+                        <SelectItem value="intermediate">
+                          Intermediate
+                        </SelectItem>
                         <SelectItem value="expert">Expert</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="requirements">Additional Requirements</Label>
+                    <Label htmlFor="freelancerAddress">
+                      Freelancer Address *
+                    </Label>
+                    <Input
+                      id="freelancerAddress"
+                      placeholder="0x... (Enter freelancer's Ethereum address)"
+                      className="bg-muted/50"
+                      value={jobData.freelancerAddress}
+                      onChange={(e) =>
+                        setJobData((prev) => ({
+                          ...prev,
+                          freelancerAddress: e.target.value,
+                        }))
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      If you have a specific freelancer in mind, enter their
+                      wallet address. Otherwise, leave empty for open
+                      applications.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="requirements">
+                      Additional Requirements
+                    </Label>
                     <Textarea
                       id="requirements"
                       placeholder="Any specific requirements, certifications, or preferences..."
@@ -226,8 +413,12 @@ export default function CreateJobPage() {
               {/* Escrow Settings */}
               <Card className="bg-card border-border">
                 <CardHeader>
-                  <CardTitle className="text-foreground">Escrow Settings</CardTitle>
-                  <CardDescription>Configure payment and escrow terms</CardDescription>
+                  <CardTitle className="text-foreground">
+                    Escrow Settings
+                  </CardTitle>
+                  <CardDescription>
+                    Configure payment and escrow terms
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -238,21 +429,35 @@ export default function CreateJobPage() {
                           <SelectValue placeholder="Select milestone structure" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="single">Single Payment (100% on completion)</SelectItem>
-                          <SelectItem value="two">Two Milestones (50% / 50%)</SelectItem>
-                          <SelectItem value="three">Three Milestones (33% / 33% / 34%)</SelectItem>
-                          <SelectItem value="custom">Custom Milestones</SelectItem>
+                          <SelectItem value="single">
+                            Single Payment (100% on completion)
+                          </SelectItem>
+                          <SelectItem value="two">
+                            Two Milestones (50% / 50%)
+                          </SelectItem>
+                          <SelectItem value="three">
+                            Three Milestones (33% / 33% / 34%)
+                          </SelectItem>
+                          <SelectItem value="custom">
+                            Custom Milestones
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="autoRelease">Auto-Release Period</Label>
-                      <Select>
+                      <Select
+                        value={jobData.duration}
+                        onValueChange={(value) =>
+                          setJobData((prev) => ({ ...prev, duration: value }))
+                        }
+                      >
                         <SelectTrigger className="bg-muted/50">
                           <SelectValue placeholder="Select auto-release period" />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="1">1 day</SelectItem>
                           <SelectItem value="3">3 days</SelectItem>
                           <SelectItem value="7">7 days</SelectItem>
                           <SelectItem value="14">14 days</SelectItem>
@@ -276,11 +481,22 @@ export default function CreateJobPage() {
 
               {/* Action Buttons */}
               <div className="flex gap-4 justify-end">
-                <Button variant="outline" asChild>
+                <Button variant="outline" asChild disabled={isLoading}>
                   <Link href="/jobs">Cancel</Link>
                 </Button>
-                <Button type="submit" className="bg-primary hover:bg-primary/90">
-                  Post Job
+                <Button
+                  type="button"
+                  className="bg-primary hover:bg-primary/90"
+                  onClick={handleCreateJob}
+                  disabled={
+                    isLoading ||
+                    !jobData.title ||
+                    !jobData.description ||
+                    !jobData.budget
+                  }
+                >
+                  <Shield className="w-4 h-4 mr-2" />
+                  {isLoading ? "Creating..." : "Create Job & Deploy Escrow"}
                 </Button>
               </div>
             </form>
@@ -288,5 +504,5 @@ export default function CreateJobPage() {
         </main>
       </div>
     </div>
-  )
+  );
 }

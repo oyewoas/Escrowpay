@@ -4,16 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Bell, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useDisconnect } from "wagmi";
-import { useEffect } from "react";
+import { useDisconnect, useAccount } from "wagmi";
+import { useEffect, useState } from "react";
 
-interface HeaderProps {
-  isConnected: boolean;
-  address?: `0x${string}`;
-  setIsConnected: (connected: boolean) => void;
-}
+export function Header() {
+  const { isConnected, address } = useAccount();
+  const [localIsConnected, setLocalIsConnected] = useState(isConnected);
 
-export function Header({ isConnected, address, setIsConnected }: HeaderProps) {
+  useEffect(() => {
+    setLocalIsConnected(isConnected);
+  }, [isConnected]);
   function shortenAddress(addr: string) {
     return addr.slice(0, 6) + "..." + addr.slice(-4);
   }
@@ -22,13 +22,13 @@ export function Header({ isConnected, address, setIsConnected }: HeaderProps) {
 
   const handleDisconnect = () => {
     disconnect();
-    setIsConnected(false);
+    setLocalIsConnected(false);
     console.log("Attempted to disconnect. Check if wallet is disconnected.");
   };
 
   useEffect(() => {
-    console.log("Connection state:", isConnected, "Address:", address);
-  }, [isConnected, address]);
+    console.log("Connection state:", localIsConnected, "Address:", address);
+  }, [localIsConnected, address]);
 
   return (
     <header className="sticky top-0 z-20 bg-background/80 backdrop-blur-sm border-b border-border">
@@ -52,7 +52,7 @@ export function Header({ isConnected, address, setIsConnected }: HeaderProps) {
           </Button>
 
           <div className="flex items-center gap-2">
-            {isConnected ? (
+            {localIsConnected ? (
               <div className="flex items-center gap-2">
                 <Badge variant="secondary" className="bg-accent/20 text-accent">
                   Connected{" "}

@@ -6,6 +6,7 @@ import { createAppKit } from "@reown/appkit/react";
 import { sepolia, arbitrum } from "@reown/appkit/networks";
 import React, { type ReactNode } from "react";
 import { cookieToInitialState, WagmiProvider, type Config } from "wagmi";
+import { EscrowProvider } from "./escrow-context";
 
 // Set up queryClient
 const queryClient = new QueryClient();
@@ -51,7 +52,9 @@ function ContextProvider({
       config={wagmiAdapter.wagmiConfig as Config}
       initialState={initialState}
     >
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <EscrowProvider>{children}</EscrowProvider>
+      </QueryClientProvider>
     </WagmiProvider>
   );
 }
